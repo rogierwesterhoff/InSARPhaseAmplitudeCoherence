@@ -3,22 +3,15 @@
 cc
 
 baresoil=false;
-xlsfilename = 'i:\GroundWater\Research\Smart\Satellite RS\Papers_Reports_Presentations\Journal_Papers\GRL_InSAR_phase_disturbances\YearInAPaddock.xlsx';
-% xlsfilename = 'i:\GroundWater\Research\Smart\Satellite RS\Papers_Reports_Presentations\Journal_Papers\GRL_InSAR_phase_disturbances\YearOnALevee.xlsx';
+xlsfilename = 'YearInAPaddock.xlsx';
 xlstabname = 'Sheet1';
-% freq=5.405e9; % C-band
-freq=10e9; % X-band
+freq=5.405e9; % C-band, % freq=10e9; % X-band
 lambda = 3e8/freq; % wavelength (needed later)
 numscenarios = 50;
 % imode_inc=1; % incident wave
 imode_refl=2; % reflection
 imode_trans=3; % transmitted
 Ei0=1;
-% eps_soil=3; % the reference soil. A dry sand
-% eps_soil=24-1i*5;% the references soil: silty clay Hallikainen
-% eps_soil=75-1i*30;% fresh-brackish water-saturated
-% eps_soil=5.55-1i*1.25;% vegetation
-% eps_soil=2-1i*1;% light vegetation
 
 [num,~,raw]=xlsread(xlsfilename,xlstabname);
 dateStrings = datetime(raw(2:size(num,1)+1,1),'ConvertFrom','excel');
@@ -40,11 +33,7 @@ Hcoh = nan(size(soilMoisture));
 Ecoh = nan(size(soilMoisture));
 angleE02 = nan(size(soilMoisture));
 angleH02 = nan(size(soilMoisture));
-
-reps=num(1,2); ieps = num(1,3); % tmp
-eps_soil=reps(1)-1i*ieps(1);
-[E1,H1,E01,H01] = em_propagation_2lyrs(1,eps_soil,Ei0,false,freq);
-    
+ 
 for iscenario = 1:numscenarios
     if iscenario == 1
         noisefactor = 0;
@@ -56,6 +45,11 @@ for iscenario = 1:numscenarios
     ieps = num(:,3)+noisefactor*randn(size(num,1),1).*num(:,3);
    
     if baresoil
+        % for the coherence, a reference is needed: E01
+        repstmp=num(1,2); iepstmp = num(1,3);
+        eps_soil=repstmp(1)-1i*iepstmp(1);
+        [~,~,E01,~] = em_propagation_2lyrs(1,eps_soil,Ei0,false,freq);
+        
         for i=1:length(reps)
             
             if i==1
@@ -102,6 +96,8 @@ for iscenario = 1:numscenarios
             end
             
             numWaves = grassHeight(i)/lambda;
+
+            eps_soil=reps(i)-1i*ieps(i);
             eps_veg=repsveg(i)-1i*iepsveg(i);
             
             % a: travel through vegetation.
@@ -111,11 +107,6 @@ for iscenario = 1:numscenarios
             [E2b,H2b,E02b,H02b] = em_propagation_2lyrs(eps_veg,eps_soil,damp1*E02a(3),false,freq); % transmitting signal from vegetation as input (E02a(3))
             % travel back through vegetation. Input = row 2, plus damping factor
             damp2=abs(E2b(2,end))./abs(E2b(2,1)); % 1= not damped, 0=totally damped
-            %% SO CHECK THIS: if Z_vegetation is higher than Z_soil, the reflection is different. That is rarely the case though (thick wet vegetation on completely dry ground is rare).
-            %             if E02b(2)/E02b(1)<0
-            %                 externalrefl=true; % E field is reversed. H field not. External reflection. Z2 > Z1.
-            %                 internalrefl=true; % H field is reversed. E field not. Internal reflection. Z1 > Z2.
-            %             end
             [E2c,H2c,E02c,H02c] = em_propagation_2lyrs(eps_veg,1,damp2*E02b(2),false,freq,numWaves); %
             
             if i==1
@@ -210,7 +201,7 @@ ax.XTickLabel=xticklabel;
 ax.FontSize = 14;
 grid on
 
-%% X-band repeat
+%% X-band repeat (different freq and reps)
 percLOSDeformationE2xband = zeros(size(soilMoisture,1),numscenarios); % first one should be zero
 percLOSDeformationH2xband = zeros(size(soilMoisture,1),numscenarios); % first one should be zero
 Hcoh = nan(size(soilMoisture));
@@ -218,13 +209,11 @@ Ecoh = nan(size(soilMoisture));
 angleE02 = nan(size(soilMoisture));
 angleH02 = nan(size(soilMoisture));
 
-reps=num(1,2); ieps = num(1,3); % tmp
+reps=0.8333*num(1,2); ieps = 1.25*num(1,3); % tmp
 eps_soil=reps(1)-1i*ieps(1);
 [E1,H1,E01,H01] = em_propagation_2lyrs(1,eps_soil,Ei0,false,freq);
 
-freq=5.405e9; % C-band
-% freq=10e9; % X-band
-lambda = 3e8/freq; % wavelength (needed later)
+freq=10e9; % X-band
 
 for iscenario = 1:numscenarios
     if iscenario == 1
@@ -235,7 +224,12 @@ for iscenario = 1:numscenarios
     
     reps = num(:,2)+noisefactor*randn(size(num,1),1).*num(:,2);
     ieps = num(:,3)+noisefactor*randn(size(num,1),1).*num(:,3);
-   
+    
+    % Conversion from C to X-band changes dielectric properties. See
+    % Supplement text.
+    reps=0.8333*reps;
+    ieps=1.25*ieps;
+    
     if baresoil
         for i=1:length(reps)
             
@@ -273,7 +267,11 @@ for iscenario = 1:numscenarios
         grassHeight = num(:,4);
         repsveg = num(:,6)+noisefactor*randn(size(num,1),1).*num(:,6);
         iepsveg = num(:,7)+noisefactor*randn(size(num,1),1).*num(:,7);        
-          
+        
+        % Conversion from C to X-band changes dielectric properties. See
+        % Supplement text.
+        repsveg=0.8333*repsveg;
+        iepsveg=1.25*iepsveg;
         
         for i=1:length(reps)
             
@@ -292,11 +290,6 @@ for iscenario = 1:numscenarios
             [E2b,H2b,E02b,H02b] = em_propagation_2lyrs(eps_veg,eps_soil,damp1*E02a(3),false,freq); % transmitting signal from vegetation as input (E02a(3))
             % travel back through vegetation. Input = row 2, plus damping factor
             damp2=abs(E2b(2,end))./abs(E2b(2,1)); % 1= not damped, 0=totally damped
-            %% SO CHECK THIS: if Z_vegetation is higher than Z_soil, the reflection is different. That is rarely the case though (thick wet vegetation on completely dry ground is rare).
-            %             if E02b(2)/E02b(1)<0
-            %                 externalrefl=true; % E field is reversed. H field not. External reflection. Z2 > Z1.
-            %                 internalrefl=true; % H field is reversed. E field not. Internal reflection. Z1 > Z2.
-            %             end
             [E2c,H2c,E02c,H02c] = em_propagation_2lyrs(eps_veg,1,damp2*E02b(2),false,freq,numWaves); %
             
             if i==1
@@ -323,8 +316,8 @@ for iscenario = 1:numscenarios
             
         end
     end
-    absHcoh=abs(Hcoh);
-    absEcoh=abs(Ecoh);
+    absHcoh=abs(real(Hcoh));
+    absEcoh=abs(real(Ecoh));
     
     percLOSDeformationE2xband(:,iscenario) = lambda*(angleE02-angleE02(1))/360;
     percLOSDeformationH2xband(:,iscenario) = lambda*(angleH02-angleH02(1))/360;
@@ -342,19 +335,19 @@ subplot(5,1,4:5)
 plot(dateNums,percLOSDeformationE*1000,'-','LineWidth',0.5,'Color',[0.9 0.9 0.9]); hold on
 plot(dateNums,percLOSDeformationE2xband*1000,'-.','LineWidth',0.5,'Color',[0.8 0.8 0.8]);
 % plot(percLOSDeformationH*1000,'LineWidth',0.5);
-ylim([-10 10])
+ylim([-14 10])
 xlim([xtick(1)-5 xtick(end)])
 %% TODO: plot X-band and C-band
 ylabel(['Perceived LOS deformation (mm)'])
 ax=gca;
 ax.XTick=xtick;
-ax.YTick=-10:2:10;
+ax.YTick=-14:2:10;
 ax.XTickLabel=xticklabel;
 ax.FontSize = 14;
 grid on
 
-leg2=plot(dateNums,percLOSDeformationE2xband(:,1)*1000,'-','LineWidth',2,'Color',[0.2 0.5 0.2]); 
-leg1=plot(dateNums,percLOSDeformationE(:,1)*1000,'-','LineWidth',2,'Color',[0.1 0.1 0.1]); 
+leg1=plot(dateNums,percLOSDeformationE2xband(:,1)*1000,'-','LineWidth',2,'Color',[0.2 0.5 0.2]); 
+leg2=plot(dateNums,percLOSDeformationE(:,1)*1000,'-','LineWidth',2,'Color',[0.1 0.1 0.1]); 
 
 % plot(percLOSDeformationH*1000,'LineWidth',0.5);
 str={'X-band','C-band'};

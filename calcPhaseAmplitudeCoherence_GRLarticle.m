@@ -1,8 +1,10 @@
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Code belonging to manucscript 'Explanation of InSAR phase disturbances by seasonal characteristics of soil and vegetation'.
+% Rogier Westerhoff and Moira Steyn-Ross
+%   This script is used to calculate phases, amplitudes and coherence of microwave radar
+
 cc
 
-baresoil=false;
+baresoil=true;
 plotcoherence=true;
 
 freq=5.405e9;
@@ -124,8 +126,8 @@ angleHcoh=180*imag(Hcoh)/pi;
 angleEcoh=180*imag(Ecoh)/pi;
 
 if plotcoherence
-%     OLDER PLOTS USED FOR SUPPLEMENT (SEE calc_coherence.m)
-    % todo: build mask from real(Ecoh < 0.3)
+    % Optional TODO: build mask from real(Ecoh < 0.3). 
+    % Not needed now, since no values < 0.3
     
     ssize=get(0,'ScreenSize');
     hfig = figure;
@@ -139,9 +141,9 @@ if plotcoherence
     set(hfig, 'Position', [ssize(1)+100, ssize(2)+150, 1000, 700]);
     subplot(2,1,1)
     if baresoil
-        plot_imagesc_rogier_angle(angleE02,reps,ieps,'\Phi E_0 (Degrees)',cm); hold on
+        plot_imagesc_rogier_angle(angleE02,reps,ieps,'\Phi E_r (Degrees)',cm); hold on
     else
-        plot_imagesc_rogier_angle(angleE02,reps,ieps,'\Phi E_0 (Degrees)',cm,minmax); hold on
+        plot_imagesc_rogier_angle(angleE02,reps,ieps,'\Phi E_r (Degrees)',cm,minmax); hold on
     end
     plot(xplot,yplot,'wo','MarkerSize',6,'MarkerFaceColor',[0.8 0.8 0.8])
     ax=gca;
@@ -149,16 +151,14 @@ if plotcoherence
     ax.YTick=ytick;ax.YTickLabel=ytick; 
     ax.FontSize=14;
     subplot(2,1,2)
-    plot_imagesc_rogier_angle(abs(E02),reps,ieps,'|E_0| / E_{0,air}',cm)
+    plot_imagesc_rogier_angle(abs(E02),reps,ieps,'|E_r| / E_{0,air}',cm)
     ax=gca;
     ax.XTick=xtick;ax.XTickLabel=xtick; 
     ax.YTick=ytick;ax.YTickLabel=ytick; 
     ax.FontSize=14;
     hold off
     
-
-
-% 
+ 
 % % plot of amplitude and phase of E02 and H02 of the reflected wave at the boundary in medium 1
 %     ssize=get(0,'ScreenSize');
 %     hfig = figure;
